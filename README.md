@@ -14,7 +14,8 @@ No hosted-backend lock-in: a small Hono API talks to any PostgreSQL database thr
 Serve over HTTPS, and set `TRUST_PROXY=1` only behind a trusted proxy (it makes rate limiting use X-Forwarded-For).
 
 ## Vercel
-Vercel deploys the Vite frontend from `dist` and the API through `api/[...path].ts`. Configure
+Vercel installs development dependencies for the build because TypeScript and Vite are required.
+It deploys the frontend from `dist` and the API through `api/[...path].ts`. Configure
 `DATABASE_URL`, `SESSION_SECRET`, `CAPTAIN_A_CODE`, `CAPTAIN_B_CODE`, `ADMIN_USERNAME`, and
 `ADMIN_PASSWORD` in the Vercel project environment. Apply the database migration to the hosted
 PostgreSQL database before serving traffic. Redeploy after adding or changing these settings.
