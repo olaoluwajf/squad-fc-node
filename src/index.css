@@ -1,0 +1,18 @@
+@import "tailwindcss";
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --color-forest: #123524;
+  --color-lime: #b6e03c;
+  --color-line: #e3e7e0;
+  --color-muted: #667068;
+  --color-ink: #1c211e;
+  --color-paper: #f7f8f5;
+}
+body { background: var(--color-paper); color: var(--color-ink); }
+@layer components {
+  .btn { @apply inline-flex h-10 items-center justify-center gap-2 bg-forest px-4 text-sm font-semibold text-white transition-colors hover:bg-forest/90 disabled:opacity-50; }
+  .btn-lime { @apply bg-lime text-forest hover:bg-lime/90; }
+  .btn-outline { @apply border border-line bg-white text-ink hover:bg-paper; }
+  .input { @apply h-10 w-full border border-line bg-white px-3 text-sm outline-none focus:border-forest; }
+  .card { @apply border border-line bg-white p-5; }
+}
