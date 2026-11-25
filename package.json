@@ -15,11 +15,29 @@
     "test:concurrency": "node scripts/concurrency-test.mjs"
   },
   "dependencies": {
-    "@hono/node-server": "latest", "bcryptjs": "latest", "hono": "latest", "jose": "latest", "lucide-react": "latest",
-    "motion": "latest", "pg": "latest", "react": "latest", "react-dom": "latest", "react-router-dom": "latest", "zod": "latest"
+    "@hono/node-server": "latest",
+    "@libsql/client": "^0.18.0",
+    "bcryptjs": "latest",
+    "hono": "latest",
+    "jose": "latest",
+    "lucide-react": "latest",
+    "motion": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router-dom": "latest",
+    "zod": "latest"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "latest", "@types/node": "latest", "@types/pg": "latest", "@types/react": "latest", "@types/react-dom": "latest",
-    "@vitejs/plugin-react": "latest", "concurrently": "latest", "tailwindcss": "latest", "tsx": "latest", "typescript": "latest", "vite": "latest", "vitest": "latest"
+    "@tailwindcss/vite": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vitejs/plugin-react": "latest",
+    "concurrently": "latest",
+    "tailwindcss": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "vitest": "latest"
   }
 }

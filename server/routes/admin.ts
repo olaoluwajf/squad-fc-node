@@ -11,7 +11,8 @@ adminRoutes.post("/login", async (c) => {
   const { username, password } = await body(c, z.object({ username: z.string().min(1).max(100), password: z.string().min(1).max(200) }));
   const ip = clientIp(c);
   await assertNotLocked("admin", ip);
-  const row = (await pool.query("select id, password_hash from admins where username = $1", [username])).rows[0];
+  const row = (await pool.query<{ id: string; password_hash: string }>(
+    "select id, password_hash from admins where username = $1", [username])).rows[0];
   const ok = await verifyHash(password, row?.password_hash ?? DUMMY_HASH);
   if (!row || !ok) { await recordFailure("admin", ip); throw new HttpError(401, "Invalid credentials"); }
   await clearFailures("admin", ip);

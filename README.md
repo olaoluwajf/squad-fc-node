@@ -1,42 +1,33 @@
-# Squad FC (React + Vite + Node API + PostgreSQL)
+# Squad FC (React + Vite + Hono + Turso/libSQL)
 
-No hosted-backend lock-in: a small Hono API talks to any PostgreSQL database through `pg`.
+The Hono API stores data in Turso/libSQL. Local development uses a SQLite file; Vercel connects to a hosted Turso database.
 
 ## Run locally
-1. `docker compose up -d` (or point `DATABASE_URL` at any Postgres 13+).
-2. `npm install`, copy `.env.example` to `.env`, set `SESSION_SECRET`, both captain codes (8+ chars, different),
-   and the admin username and password (10+ chars).
-3. `npm run db:migrate && npm run db:seed` (add `db:seed:demo` for 20 sample players on an empty squad).
-4. `npm run dev` (API on :8787, Vite on :5173 with an /api proxy).
+1. Copy `.env.example` to `.env`.
+2. Set `SESSION_SECRET`, both distinct captain codes (8+ characters), and the admin username and password (10+ characters).
+3. Run `npm install`, `npm run db:migrate`, and `npm run db:seed`.
+4. Run `npm run dev` (API on :8787, Vite on :5173 with an `/api` proxy).
 
-## Production
-`npm run build`, then `npm start`. One Node process serves the API and the built frontend, so cookies are same-origin.
-Serve over HTTPS, and set `TRUST_PROXY=1` only behind a trusted proxy (it makes rate limiting use X-Forwarded-For).
+## Deploy to Vercel with Turso
+1. Install the [Turso CLI](https://docs.turso.tech/quickstart), sign in with `turso auth login`, then create a libSQL database with `turso db create squad-fc` (do not add `--tursodb`).
+2. Get its URL with `turso db show squad-fc --url` and create an auth token with `turso db tokens create squad-fc`.
+3. Add `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, and a strong `SESSION_SECRET` to the Vercel project environment for Production.
+4. Temporarily put the hosted URL/token and seed credentials in local `.env`, then run `npm run db:migrate` and `npm run db:seed` once against the hosted database. Restore the local URL (`file:local.db`) afterward.
+5. Redeploy Vercel. Never expose the auth token or database URL in browser code or commit them to the repository.
 
-## Vercel
-Vercel installs development dependencies for the build because TypeScript and Vite are required.
-It deploys the frontend from `dist` and the API through `api/[...path].ts`. Configure
-`DATABASE_URL`, `SESSION_SECRET`, `CAPTAIN_A_CODE`, `CAPTAIN_B_CODE`, `ADMIN_USERNAME`, and
-`ADMIN_PASSWORD` in the Vercel project environment. Apply the database migration to the hosted
-PostgreSQL database before serving traffic. Redeploy after adding or changing these settings.
-
-## Structure
-- `server/allocation.ts` and `server/rebalance.ts`: pure allocation and rebalance logic, no I/O.
-- `server/services/`: transactional operations (`registration`, `admin`, `stats`).
-- `server/routes/`: HTTP routes (`public`, `captain`, `admin`). `server/auth.ts`: sessions and rate limiting.
-- `server/db/`: pool, migrations, seed. `src/`: React app. `src/lib/api.ts`: the only place that calls `fetch`.
+Vercel deploys the frontend from `dist` and the API through `api/[...path].ts`. Database credentials are only used by the server.
+The hosted database starts empty; the seed creates Team Obi and Team Prosper, but does not copy existing PostgreSQL players or other data.
 
 ## Safety model
-- Registration and every admin write run in a transaction that first locks the settings row, so counts are never stale.
-- A database trigger also rejects any insert or move into a team that already holds half the total capacity.
-- Capacity is the TOTAL (default 24, so 12 per team), even numbers only. Decreases below current usage are rejected.
-- Captain and admin codes are bcrypt hashed. Sessions are signed JWTs in HTTP-only, SameSite=Lax cookies.
-  The captain's team comes only from the signed session. Five failed logins per IP in 15 minutes locks that IP out.
+- Registration and admin writes run in serialized write transactions.
+- A database trigger rejects inserts or team moves that exceed half the total capacity.
+- Capacity is the total squad size (default 24, 12 per team); decreases below current usage are rejected.
+- Captain and admin credentials are bcrypt-hashed. Sessions are signed JWTs in HTTP-only, SameSite=Lax cookies.
+- Five failed logins per IP in 15 minutes locks that IP out.
 
 ## Tests
-- `npm test`: unit tests for allocation (adversarial order, odd counts, random orders, capacity limits) and rebalancing.
-- `npm run test:concurrency`: 40 simultaneous registrations against a running dev server (use an empty squad).
+- `npm test`: allocation and rebalancing unit tests.
+- `npm run test:concurrency`: 40 simultaneous registrations against a running dev server (use an empty database).
 
-## Swapping the database
-All SQL lives in `server/db/migrations` and `server/services`. Any Postgres host (Neon, Railway, Render, RDS, self-hosted)
-works by changing `DATABASE_URL`. For a different engine, only `server/services/*` and `server/db/*` need changes.
+## Database
+`server/db/migrations` contains the SQLite-compatible schema. Local development uses `file:local.db`; hosted deployments use Turso's `libsql://` URL with `TURSO_AUTH_TOKEN`.

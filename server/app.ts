@@ -19,9 +19,15 @@ app.all("/api/*", (c) => c.json({ error: "Not found" }, 404));
 app.onError((err, c) => {
   if (err instanceof HTTPException) return err.getResponse();
   if (err instanceof HttpError) return c.json({ error: err.message }, err.status);
-  const code = (err as { code?: string }).code;
-  if (code === "23505") return c.json({ error: "That name is already registered" }, 409);
-  if (code === "23514") return c.json({ error: "A team is full" }, 409);
+  const dbError = err as { code?: string; extendedCode?: string };
+  const code = dbError.extendedCode ?? dbError.code;
+  if (code === "23505" || code === "SQLITE_CONSTRAINT_UNIQUE" || code === "SQLITE_CONSTRAINT_PRIMARYKEY") {
+    return c.json({ error: "That name is already registered" }, 409);
+  }
+  if (code === "23514" || code === "SQLITE_CONSTRAINT_TRIGGER") return c.json({ error: "A team is full" }, 409);
+  if (code === "SQLITE_BUSY" || code?.startsWith("SQLITE_BUSY_") || code === "TRANSACTION_ACTIVE") {
+    return c.json({ error: "The database is busy. Please retry shortly." }, 503);
+  }
   if (code && ["ECONNREFUSED", "ETIMEDOUT", "ENOTFOUND", "57P01", "08006", "08001"].includes(code)) {
     console.error("Database unavailable:", err.message);
     return c.json({ error: "Database unavailable. Please try again shortly." }, 503);

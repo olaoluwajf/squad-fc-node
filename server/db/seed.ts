@@ -1,5 +1,6 @@
+import { randomUUID } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { pool } from "./client";
+import { closeDatabase, pool } from "./client";
 import { registerPlayer } from "../services/registration";
 import type { Position } from "../allocation";
 
@@ -12,15 +13,15 @@ const codeA = need("CAPTAIN_A_CODE", 8), codeB = need("CAPTAIN_B_CODE", 8);
 if (codeA === codeB) throw new Error("Captain codes must differ");
 
 await pool.query("insert into platform_settings (id) values (1) on conflict do nothing");
-await pool.query("insert into teams (id, team_name, captain_name) values (1, 'Team A', 'Captain A'), (2, 'Team B', 'Captain B') on conflict do nothing");
+await pool.query("insert into teams (id, team_name, captain_name) values (1, 'Team Obi', 'Obi Chukwuemeka'), (2, 'Team Prosper', 'Ani Prosper') on conflict do nothing");
 for (const [team, code] of [[1, codeA], [2, codeB]] as const) {
   await pool.query(
-    "insert into captains (team_id, access_code_hash) values ($1, $2) on conflict (team_id) do update set access_code_hash = excluded.access_code_hash",
-    [team, await bcrypt.hash(code, 12)]);
+    "insert into captains (id, team_id, access_code_hash) values ($1, $2, $3) on conflict (team_id) do update set access_code_hash = excluded.access_code_hash",
+    [randomUUID(), team, await bcrypt.hash(code, 12)]);
 }
 await pool.query(
-  "insert into admins (username, password_hash) values ($1, $2) on conflict (username) do update set password_hash = excluded.password_hash",
-  [need("ADMIN_USERNAME"), await bcrypt.hash(need("ADMIN_PASSWORD", 10), 12)]);
+  "insert into admins (id, username, password_hash) values ($1, $2, $3) on conflict (username) do update set password_hash = excluded.password_hash",
+  [randomUUID(), need("ADMIN_USERNAME"), await bcrypt.hash(need("ADMIN_PASSWORD", 10), 12)]);
 
 if (process.argv.includes("--demo") && (await pool.query("select 1 from players")).rowCount === 0) {
   const names = ["Chinedu Okafor", "Emeka Eze", "Tunde Bakare", "Ifeanyi Nwosu", "Samuel Adeyemi", "Kelechi Obi", "Daniel Mba", "Chukwuma Ani", "Obinna Ugwu", "Femi Ojo", "Ikenna Okeke", "David Eke", "Uche Nnamdi", "Kingsley Agu", "Paul Onyeka", "Henry Dike", "Victor Asogwa", "Ahmed Bello", "Tobi Alade", "Sunday Ibe"];
@@ -29,4 +30,4 @@ if (process.argv.includes("--demo") && (await pool.query("select 1 from players"
   console.log("demo players added");
 }
 console.log("seed complete");
-await pool.end();
+closeDatabase();

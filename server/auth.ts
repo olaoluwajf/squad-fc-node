@@ -15,8 +15,8 @@ export const clientIp = (c: Context) =>
 
 // ---- login rate limiting (failed attempts per IP and scope, 15 minute window) ----
 export async function assertNotLocked(scope: Kind, ip: string) {
-  const { rows } = await pool.query(
-    "select count(*)::int as n from login_attempts where scope = $1 and ip = $2 and created_at > now() - interval '15 minutes'", [scope, ip]);
+  const { rows } = await pool.query<{ n: number }>(
+    "select count(*) as n from login_attempts where scope = $1 and ip = $2 and julianday(created_at) > julianday('now', '-15 minutes')", [scope, ip]);
   if (rows[0].n >= MAX_FAILURES) throw new HttpError(429, "Too many failed attempts. Try again in 15 minutes.");
 }
 export const recordFailure = (scope: Kind, ip: string) => pool.query("insert into login_attempts (scope, ip) values ($1, $2)", [scope, ip]);
@@ -49,8 +49,8 @@ export const requireCaptain: MiddlewareHandler<Env> = async (c, next) => {
 };
 export const requireAdmin: MiddlewareHandler<Env> = async (c, next) => {
   const s = await readSession(c, "admin");
-  if (!s) throw new HttpError(401, "Unauthorized");
-  const { rows } = await pool.query("select id, username from admins where id = $1", [s.adminId]);
+  if (!s || typeof s.adminId !== "string") throw new HttpError(401, "Unauthorized");
+  const { rows } = await pool.query<{ id: string; username: string }>("select id, username from admins where id = $1", [s.adminId]);
   if (!rows[0]) throw new HttpError(401, "Unauthorized"); // admin removed since login
   c.set("adminId", rows[0].id); c.set("adminUser", rows[0].username);
   await next();
